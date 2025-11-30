@@ -49,3 +49,27 @@ def manhattan_map() -> None:
     # Save the image
     plt.savefig(constants.MANHATTAN_MAP_FILE_PATH, format="png", bbox_inches="tight")
     plt.close(fig)
+
+@dg.asset(
+    deps=["taxi_trips"]
+)
+def trips_by_week() -> None:
+    query = """
+        select
+            date_trunc('week', tpep_pickup_datetime) as period,
+            count(*) as num_trips,
+            sum(passenger_count) as passenger_count,
+            sum(total_amount) as total_amount,
+            sum(trip_distance) as trip_distance
+        from 'data/raw/taxi_trips_2023-03.parquet'
+        group by
+            period
+    """
+
+    conn = duckdb.connect(os.getenv("DUCKDB_DATABASE"))
+    trips_by_week = conn.execute(query).fetch_df()
+
+    trips_by_week.to_csv(
+        constants.TRIPS_BY_WEEK_FILE_PATH,
+        index=False
+    )
